@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 	kcmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -24,11 +25,13 @@ import (
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	"github.com/openshift/library-go/pkg/config/helpers"
 	"github.com/openshift/library-go/pkg/serviceability"
+	"github.com/openshift/openshift-controller-manager/pkg/cmd/controller"
 )
 
 type OpenShiftControllerManager struct {
-	ConfigFilePath string
-	Output         io.Writer
+	ConfigFilePath               string
+	DisabledByDefaultControllers []string
+	Output                       io.Writer
 }
 
 var longDescription = templates.LongDesc(`
@@ -43,6 +46,7 @@ func NewOpenShiftControllerManagerCommand(name string, out, errout io.Writer, ct
 		Long:  longDescription,
 		Run: func(c *cobra.Command, args []string) {
 			kcmdutil.CheckErr(options.Validate())
+			kcmdutil.CheckErr(options.SetDisabledControllers())
 
 			serviceability.StartProfiler()
 
@@ -64,6 +68,8 @@ func NewOpenShiftControllerManagerCommand(name string, out, errout io.Writer, ct
 	flags := cmd.Flags()
 	// This command only supports reading from config
 	flags.StringVar(&options.ConfigFilePath, "config", options.ConfigFilePath, "Location of the master configuration file to run from.")
+	// This command allows you to disable certain controllers
+	flags.StringSlice("disabled-controllers", options.DisabledByDefaultControllers, "Disabled controllers that won't be started by openshift-controller-manager.")
 	cmd.MarkFlagFilename("config", "yaml", "yml")
 	cmd.MarkFlagRequired("config")
 
@@ -75,6 +81,13 @@ func (o *OpenShiftControllerManager) Validate() error {
 		return errors.New("--config is required for this command")
 	}
 
+	return nil
+}
+
+func (o *OpenShiftControllerManager) SetDisabledControllers() error {
+	for _, s := range(o.DisabledByDefaultControllers){
+		controller.DisabledByDefaultControllers[s] = sets.Empty{}
+	}
 	return nil
 }
 

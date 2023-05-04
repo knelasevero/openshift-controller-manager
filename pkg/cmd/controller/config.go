@@ -1,5 +1,9 @@
 package controller
 
+import "k8s.io/apimachinery/pkg/util/sets"
+
+var DisabledByDefaultControllers = sets.String{}
+
 var ControllerInitializers = map[string]InitFunc{
 	"openshift.io/serviceaccount": RunServiceAccountController,
 

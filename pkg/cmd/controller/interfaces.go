@@ -187,7 +187,7 @@ func (c *ControllerContext) StartInformers(stopCh <-chan struct{}) {
 	}
 }
 
-func (c *ControllerContext) IsControllerEnabled(name string) bool {
+func (c *ControllerContext) IsControllerEnabled(disabledByDefaultControllers sets.String, name string) bool {
 	return app.IsControllerEnabled(name, sets.String{}, c.OpenshiftControllerConfig.Controllers)
 }
 
